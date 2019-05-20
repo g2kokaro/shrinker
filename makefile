@@ -1,2 +1,2 @@
 shrinker: shrinker.c
-	gcc -o shrinker shrinker.c
+	gcc -Wall -o shrinker shrinker.c
