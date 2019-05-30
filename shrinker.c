@@ -3,11 +3,14 @@
 #include <string.h>
 #define bufferSize 2048
 
-void hexDump(char * buffer, int length){
-  for (int i = 0; i < length; i++){
-    printf("%x", buffer[i] & 0xff);
-  }
-}
+// void hexDump(char * buffer, int length){
+//   for (int i = 0; i < length; i++){
+//     printf("%02hhX", (unsigned char)buffer[i]);
+//     if(i % 2 == 0){ printf(" "); }
+//     if(i % 16 == 0){ printf("\n"); }
+//   }
+//   printf("\n");
+// }
 
 void writeBytes(int count, int previous, int current, FILE *out){
   if(count == 1){
@@ -50,12 +53,12 @@ void shrink (FILE *in, FILE *out){
 }
 
 void unshrink (FILE *in, FILE *out){
-  char * outputBuffer = malloc(bufferSize);
+  char *outputBuffer = malloc(bufferSize);
   int bufferIndex = 0;
+  
   unsigned char count = 0;
-  unsigned char byte = 0;
+  unsigned char byte = fgetc(in);
   while (!feof(in)){
-    byte = fgetc(in);
     if(byte == 0x00){
       byte = fgetc(in);
       if(byte == 0x00){
@@ -65,22 +68,27 @@ void unshrink (FILE *in, FILE *out){
         count = byte;
         byte = fgetc(in);
         for(int i = 0; i < count; i++){
-          fputc(byte, out);
+          outputBuffer[bufferIndex] = byte;
+          bufferIndex++;
         }
-        byte = fgetc(in);
+        
       }
     } else {
-      fputc(byte, out);
+      outputBuffer[bufferIndex] = byte;
+      bufferIndex++;
     }
+    byte = fgetc(in);
   }
-
-  int previous = 0;
-  int delta = fgetc(in);
-  while(!feof(in)){
-    fputc(previous + delta, out);
-    previous = previous + delta;
-    delta = fgetc(in);
+  
+  unsigned char previous = 0;
+  unsigned char delta = 0;
+  for(int i = 0; i < bufferIndex; i++){
+    delta = outputBuffer[i];
+    outputBuffer[i] = previous + delta;
+    previous = outputBuffer[i];
   }
+  outputBuffer[bufferIndex + 1] = '\0';
+  fwrite(outputBuffer, 1, bufferIndex, out);
 }
 
 int main(int argc, char *argv[]) {
@@ -96,7 +104,15 @@ int main(int argc, char *argv[]) {
   char *outputFileName = argv[3];
 
   FILE *in = fopen(inputFileName, "r");
+  if (!in){
+    printf("Error opening input file %s!\n", argv[2]);
+    return 0;
+  }
   FILE *out = fopen(outputFileName, "a");
+  if (!out){
+    printf("Error opening output file %s!\n", argv[2]);
+    return 0;
+  }
 
   if(strcmp(mode, "shrink") == 0){
     shrink (in, out);
