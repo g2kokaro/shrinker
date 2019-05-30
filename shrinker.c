@@ -1,7 +1,26 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#define bufferSize 4096
+#define bufferSize 2048
+
+void hexDump(char * buffer, int length){
+  for (int i = 0; i < length; i++){
+    printf("%x", buffer[i] & 0xff);
+  }
+}
+
+void writeBytes(int count, int previous, int current, FILE *out){
+  if(count == 1){
+    if(previous == 0x00){
+      fputc(0x00, out);
+    }
+    fputc(previous, out);
+  } else {
+    fputc(0x00, out);
+    fputc(count, out);
+    fputc(previous, out);
+  }
+}
 
 void shrink (FILE *in, FILE *out){
   char *inputBuffer = malloc(bufferSize);
@@ -15,29 +34,19 @@ void shrink (FILE *in, FILE *out){
     current = fgetc(in);
     bufferIndex++;
   }
-
   previous = inputBuffer[0];
-  current = inputBuffer[1];
-  unsigned char count = 1;
+  int count = 1;
   for(int i = 1; i < bufferIndex; i++){
     current = inputBuffer[i];
     if(current == previous && count < 255){
       count++;
     } else {
-      if(count == 1){
-        if(previous == 0x00){
-          fputc(0x00, out);
-        }
-        fputc(previous, out);
-      } else {
-        fputc(0x00, out);
-        fputc(count, out);
-        fputc(previous, out);
-      }
+      writeBytes(count, previous, current, out);
       count = 1;
       previous = inputBuffer[i];
     }
   }
+  writeBytes(count, previous, current, out);
 }
 
 void unshrink (FILE *in, FILE *out){
@@ -77,8 +86,9 @@ void unshrink (FILE *in, FILE *out){
 int main(int argc, char *argv[]) {
   if(argc < 4){
     printf("Usage:\n");
-    printf("    node shrinker.js shrink <input-file> <output-file>\n");
-    printf("    node shrinker.js unshrink <input-file> <output-file>\n");
+    printf("    shrinker shrink <input-file> <output-file>\n");
+    printf("    shrinker unshrink <input-file> <output-file>\n");
+    return 0;
   }
 
   char *mode = argv[1];
