@@ -5,7 +5,7 @@
 
 void shrink (FILE *in, FILE *out){
   char *inputBuffer = malloc(bufferSize);
-  unsigned char bufferIndex = 0;
+  int bufferIndex = 0;
 
   int previous = 0;
   int current = fgetc(in);
@@ -41,6 +41,30 @@ void shrink (FILE *in, FILE *out){
 }
 
 void unshrink (FILE *in, FILE *out){
+  char * outputBuffer = malloc(bufferSize);
+  int bufferIndex = 0;
+  unsigned char count = 0;
+  unsigned char byte = 0;
+  while (!feof(in)){
+    byte = fgetc(in);
+    if(byte == 0x00){
+      byte = fgetc(in);
+      if(byte == 0x00){
+        outputBuffer[bufferIndex] = byte;
+        bufferIndex++;
+      } else {
+        count = byte;
+        byte = fgetc(in);
+        for(int i = 0; i < count; i++){
+          fputc(byte, out);
+        }
+        byte = fgetc(in);
+      }
+    } else {
+      fputc(byte, out);
+    }
+  }
+
   int previous = 0;
   int delta = fgetc(in);
   while(!feof(in)){
